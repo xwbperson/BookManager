@@ -411,7 +411,7 @@ function DirectoryForm({ directory, parentName, onSave, onClose }) {
   );
 }
 
-function DirectoryTree({ state, selectedDirId, expanded, onToggle, onSelect, onAdd, onRename, onDelete }) {
+function DirectoryTree({ state, directories = state.directories, selectedDirId, expanded, onToggle, onSelect, onAdd, onRename, onDelete }) {
   const renderNode = (node, depth = 0) => {
     const isExpanded = expanded.has(node.id) || selectedDirId === node.id;
     const hasChildren = node.children && node.children.length > 0;
@@ -419,12 +419,12 @@ function DirectoryTree({ state, selectedDirId, expanded, onToggle, onSelect, onA
     const count = countBooksInDir(state, node.id);
 
     return (
-      <div className="treeItem" key={node.id}>
+      <div className={`treeItem ${node.system ? 'systemTreeItem' : ''}`} key={node.id}>
         <div
-          className={`treeNode ${active ? 'active' : ''}`}
+          className={`treeNode ${node.system ? 'systemTreeNode' : ''} ${active ? 'active' : ''}`}
           style={{ paddingLeft: 12 + depth * 18 }}
         >
-          {hasChildren ? (
+          {!node.system && (hasChildren ? (
             <button
               type="button"
               className="treeChevron"
@@ -434,7 +434,7 @@ function DirectoryTree({ state, selectedDirId, expanded, onToggle, onSelect, onA
             >
               {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
             </button>
-          ) : <span className="treeChevron" aria-hidden="true" />}
+          ) : <span className="treeChevron" aria-hidden="true" />)}
           <button type="button" className="treeSelect" onClick={() => onSelect(node.id)}>
             <Folder size={16} />
             <span className="treeName">{node.name}</span>
@@ -463,7 +463,7 @@ function DirectoryTree({ state, selectedDirId, expanded, onToggle, onSelect, onA
     );
   };
 
-  return <>{state.directories.map((dir) => renderNode(dir))}</>;
+  return <>{directories.map((dir) => renderNode(dir))}</>;
 }
 
 function BookForm({ state, book, defaultDirId, onSave, onClose }) {
@@ -1549,6 +1549,18 @@ function App() {
   const currentPath = selectedDirId ? findDir(state.directories, selectedDirId)?.path || [] : [];
   const activeBooks = state.books.filter((book) => !book.deletedAt);
   const trashedBooks = state.books.filter((book) => Boolean(book.deletedAt));
+  const regularDirectories = state.directories.filter((directory) => !directory.system);
+  const systemDirectories = state.directories.filter((directory) => directory.system);
+  const toggleDirectory = (id) => setExpanded((items) => {
+    const next = new Set(items);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const selectDirectory = (id) => {
+    setSelectedDirId(id);
+    setSelectedBookId(null);
+    setActiveView('books');
+  };
   const readingCount = activeBooks.filter((book) => calcProgress(book).status === 'reading').length;
   const finishedCount = activeBooks.filter((book) => calcProgress(book).status === 'finished').length;
   const readPages = activeBooks.reduce((sum, book) => sum + calcProgress(book).readPages, 0);
@@ -1990,25 +2002,46 @@ function App() {
           <button aria-current={activeView === 'stats' ? 'page' : undefined} className={activeView === 'stats' ? 'active' : ''} onClick={() => { setActiveView('stats'); setSelectedBookId(null); }}><BarChart3 size={16} /> 统计</button>
         </nav>
 
-        <button aria-current={activeView === 'books' && !selectedDirId ? 'page' : undefined} className={`allBooks ${activeView === 'books' && !selectedDirId ? 'active' : ''}`} onClick={() => { setActiveView('books'); setSelectedDirId(null); setSelectedBookId(null); }}>
-          <Home size={16} /> 全部书籍 <span>{activeBooks.length}</span>
-        </button>
+        <section className="directoryPanel" aria-label="书籍目录">
+          <header className="directoryHeader">
+            <span><FolderOpen size={15} /> 目录</span>
+            <button type="button" className="directoryAddButton" onClick={() => addDirectory(null)}>
+              <FolderPlus size={14} /> 新建目录
+            </button>
+          </header>
+          <div className="treePane">
+            <button
+              type="button"
+              aria-current={activeView === 'books' && !selectedDirId ? 'page' : undefined}
+              className={`treeRootNode ${activeView === 'books' && !selectedDirId ? 'active' : ''}`}
+              onClick={() => { setActiveView('books'); setSelectedDirId(null); setSelectedBookId(null); }}
+            >
+              <Home size={16} />
+              <span className="treeName">全部书籍</span>
+              <span className="treeCount">{activeBooks.length}</span>
+            </button>
+            <DirectoryTree
+              state={state}
+              directories={regularDirectories}
+              selectedDirId={activeView === 'books' ? selectedDirId : null}
+              expanded={expanded}
+              onToggle={toggleDirectory}
+              onSelect={selectDirectory}
+              onAdd={addDirectory}
+              onRename={renameDirectory}
+              onDelete={deleteDirectory}
+            />
+          </div>
+        </section>
 
-        <button aria-current={activeView === 'trash' ? 'page' : undefined} className={`allBooks recycleNav ${activeView === 'trash' ? 'active' : ''}`} onClick={() => { setActiveView('trash'); setFilter('all'); setSelectedDirId(null); setSelectedBookId(null); }}>
-          <Trash2 size={16} /> 回收站 <span>{trashedBooks.length}</span>
-        </button>
-
-        <div className="treePane">
+        <div className="systemDirectoryShelf" aria-label="系统分类">
           <DirectoryTree
             state={state}
-            selectedDirId={selectedDirId}
+            directories={systemDirectories}
+            selectedDirId={activeView === 'books' ? selectedDirId : null}
             expanded={expanded}
-            onToggle={(id) => setExpanded((items) => {
-              const next = new Set(items);
-              if (next.has(id)) next.delete(id); else next.add(id);
-              return next;
-            })}
-            onSelect={(id) => { setSelectedDirId(id); setSelectedBookId(null); setActiveView('books'); }}
+            onToggle={toggleDirectory}
+            onSelect={selectDirectory}
             onAdd={addDirectory}
             onRename={renameDirectory}
             onDelete={deleteDirectory}
@@ -2016,14 +2049,22 @@ function App() {
         </div>
 
         <footer className="sidebarFooter">
-          <button onClick={() => addDirectory(null)}><FolderPlus size={15} /> 新建目录</button>
+          <div className="footerRow">
+            <button
+              type="button"
+              aria-current={activeView === 'trash' ? 'page' : undefined}
+              className={`recycleFooterButton ${activeView === 'trash' ? 'active' : ''}`}
+              onClick={() => { setActiveView('trash'); setFilter('all'); setSelectedDirId(null); setSelectedBookId(null); }}
+            >
+              <Trash2 size={15} /> 回收站 <span>{trashedBooks.length}</span>
+            </button>
+            <button type="button" onClick={() => setModal({ type: 'settings' })}><Settings size={15} /> 设置</button>
+          </div>
           <div className="footerRow">
             <button onClick={exportData}><Download size={15} /> 导出</button>
             <button onClick={importData}><FileUp size={15} /> 导入</button>
           </div>
-          <button onClick={() => setModal({ type: 'settings' })}><Settings size={15} /> 设置</button>
-          <button onClick={showDbLocation}><Database size={15} /> 打开书库根目录</button>
-          <p title={rootPath || dbPath}>{rootPath ? rootPath.split(/[\\/]/).pop() : 'BookManagerLibrary'}</p>
+          <button type="button" title={rootPath || dbPath} onClick={showDbLocation}><Database size={15} /> 打开书库根目录</button>
         </footer>
       </aside>
 

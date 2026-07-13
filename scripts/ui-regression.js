@@ -211,7 +211,14 @@ async function main() {
 
     await evaluate(client, `
       window.bookManagerDb.saveState({
-        directories: [{ id: 'd1', name: '自动化测试目录', children: [] }],
+        directories: [
+          { id: 'd1', name: '自动化测试目录', children: [] },
+          ...Array.from({ length: 14 }, (_, index) => ({
+            id: 'scroll-dir-' + (index + 1),
+            name: '滚动目录 ' + (index + 1),
+            children: []
+          }))
+        ],
         books: [{
           id: 'b1',
           directoryId: null,
@@ -315,6 +322,71 @@ async function main() {
       .filter(Boolean))()`);
     if (directoryCountSpacing.some((item) => item.gap > 12)) {
       failures.push(`Directory counts must stay visually attached to their names: ${JSON.stringify(directoryCountSpacing)}`);
+    }
+
+    const sidebarStructure = await evaluate(client, `(() => {
+      const treePane = document.querySelector('.treePane');
+      const root = treePane?.querySelector('.treeRootNode');
+      const directoryRows = [...treePane.querySelectorAll('.treeNode')];
+      const directoryNames = directoryRows.map((row) => row.querySelector('.treeName')?.textContent.trim());
+      const firstDirectoryIcon = directoryRows[0]?.querySelector('.treeSelect svg')?.getBoundingClientRect();
+      const rootIcon = root?.querySelector('svg')?.getBoundingClientRect();
+      const systemShelf = document.querySelector('.systemDirectoryShelf');
+      const uncategorizedRow = systemShelf?.querySelector('.treeNode');
+      const uncategorizedIcon = uncategorizedRow?.querySelector('.treeSelect svg')?.getBoundingClientRect();
+      const shelfTopBeforeScroll = systemShelf?.getBoundingClientRect().top;
+      treePane.scrollTop = treePane.scrollHeight;
+      const shelfTopAfterScroll = systemShelf?.getBoundingClientRect().top;
+      treePane.scrollTop = 0;
+      const footer = document.querySelector('.sidebarFooter');
+      const footerRows = [...footer.querySelectorAll(':scope > .footerRow')]
+        .map((row) => [...row.querySelectorAll(':scope > button')].map((button) => button.textContent.trim()));
+      const footerRootButton = footer.querySelector(':scope > button');
+      const recycleButton = footer.querySelector('.recycleFooterButton');
+      const settingsButton = footerRows.length ? footer.querySelector(':scope > .footerRow button:nth-child(2)') : null;
+      const uncategorizedPlacement = {
+        correctLabel: uncategorizedRow?.querySelector('.treeName')?.textContent.trim() === '未分类',
+        noChevron: Boolean(uncategorizedRow && !uncategorizedRow.querySelector('.treeChevron')),
+        alignedWithRoot: Boolean(uncategorizedIcon && rootIcon && Math.abs(uncategorizedIcon.left - rootIcon.left) <= 1),
+        outsideScrollableTree: Boolean(uncategorizedRow && !treePane.contains(uncategorizedRow)),
+        unaffectedByTreeScroll: Boolean(treePane.scrollHeight > treePane.clientHeight
+          && shelfTopBeforeScroll === shelfTopAfterScroll),
+        followsDirectoryPanel: Boolean(systemShelf?.previousElementSibling?.classList.contains('directoryPanel')),
+        precedesFooter: Boolean(systemShelf && systemShelf.nextElementSibling === footer),
+        hasDivider: Boolean(systemShelf && parseFloat(getComputedStyle(systemShelf).borderTopWidth) > 0)
+      };
+      return {
+        rootIsFirst: Boolean(root && treePane.firstElementChild === root),
+        rootHasNoChevron: Boolean(root && !root.querySelector('.treeChevron')),
+        rootIsLeftOfDirectories: Boolean(rootIcon && firstDirectoryIcon && rootIcon.left < firstDirectoryIcon.left),
+        directoryNames,
+        uncategorizedPlacement,
+        uncategorizedIsPinned: Boolean(systemShelf && Object.values(uncategorizedPlacement).every(Boolean)),
+        addDirectoryBesideHeading: Boolean(document.querySelector('.directoryHeader > .directoryAddButton')),
+        footerRows,
+        footerRootLabel: footerRootButton?.textContent.trim() || '',
+        footerChildOrder: [...footer.children].map((child) => child.classList.contains('footerRow') ? 'row' : child.tagName.toLowerCase()),
+        recycleIsRed: Boolean(recycleButton && settingsButton
+          && getComputedStyle(recycleButton).backgroundColor !== getComputedStyle(settingsButton).backgroundColor)
+      };
+    })()`);
+    if (!sidebarStructure.rootIsFirst || !sidebarStructure.rootHasNoChevron || !sidebarStructure.rootIsLeftOfDirectories) {
+      failures.push(`All books must be the uncollapsed root of the directory tree: ${JSON.stringify(sidebarStructure)}`);
+    }
+    if (!sidebarStructure.uncategorizedIsPinned) {
+      failures.push(`Uncategorized must stay pinned between the scrollable directory tree and sidebar footer: ${JSON.stringify(sidebarStructure)}`);
+    }
+    if (!sidebarStructure.addDirectoryBesideHeading) {
+      failures.push(`New directory must sit beside the directory heading: ${JSON.stringify(sidebarStructure)}`);
+    }
+    if (sidebarStructure.footerRows.length !== 2
+      || !sidebarStructure.footerRows[0][0]?.startsWith('回收站')
+      || sidebarStructure.footerRows[0][1] !== '设置'
+      || sidebarStructure.footerRows[1].join('|') !== '导出|导入'
+      || sidebarStructure.footerRootLabel !== '打开书库根目录'
+      || sidebarStructure.footerChildOrder.join('|') !== 'row|row|button'
+      || !sidebarStructure.recycleIsRed) {
+      failures.push(`Sidebar footer must follow trash/settings, export/import, library-root order with a red trash action: ${JSON.stringify(sidebarStructure)}`);
     }
 
     const globalActions = await evaluate(client, `(() => ({
