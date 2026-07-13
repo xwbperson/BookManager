@@ -176,7 +176,6 @@ textarea:focus-visible,
 }
 
 .navSwitch button,
-.allBooks,
 .sidebarFooter button,
 .filterGroup button,
 .textButton,
@@ -198,7 +197,6 @@ textarea:focus-visible,
 }
 
 .navSwitch button:hover,
-.allBooks:hover,
 .sidebarFooter button:hover,
 .filterGroup button:hover,
 .secondaryButton:hover,
@@ -208,7 +206,6 @@ textarea:focus-visible,
 }
 
 .navSwitch button.active,
-.allBooks.active,
 .filterGroup button.active,
 .iconButton.active {
   border-color: rgba(196, 154, 108, 0.42);
@@ -216,24 +213,95 @@ textarea:focus-visible,
   color: var(--accent-strong);
 }
 
-.allBooks {
-  width: calc(100% - 20px);
-  margin: 10px;
-  justify-content: flex-start;
-  padding: 0 10px;
-  flex: 0 0 auto;
+
+.directoryPanel {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  padding-top: 4px;
 }
 
-.allBooks span {
-  margin-left: auto;
+.directoryHeader {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 10px 5px 13px;
+}
+
+.directoryHeader > span,
+.directoryAddButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.directoryHeader > span {
   color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.directoryAddButton {
+  min-height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--accent-strong);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.directoryAddButton:hover,
+.directoryAddButton:focus-visible {
+  border-color: rgba(196, 154, 108, 0.38);
+  background: rgba(196, 154, 108, 0.1);
 }
 
 .treePane {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 0 8px 12px;
+  padding: 0 8px 10px;
+}
+
+.treeRootNode {
+  width: 100%;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 2px;
+  padding: 0 12px;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+  text-align: left;
+}
+
+.treeRootNode:hover,
+.treeRootNode.active {
+  background: rgba(196, 154, 108, 0.12);
+  color: var(--text);
+}
+
+.treeRootNode.active {
+  color: var(--accent-strong);
+}
+
+.systemDirectoryShelf {
+  flex: 0 0 auto;
+  margin: 0 8px;
+  padding: 7px 0 6px;
+  border-top: 1px solid var(--line);
+}
+
+.systemTreeNode {
+  color: var(--muted);
 }
 
 .treeNode {
@@ -348,14 +416,27 @@ textarea:focus-visible,
   gap: 7px;
 }
 
-.sidebarFooter p {
-  margin: 0;
-  overflow: hidden;
-  color: var(--muted);
+.sidebarFooter .recycleFooterButton {
+  border-color: color-mix(in srgb, var(--red) 30%, transparent);
+  background: color-mix(in srgb, var(--red) 10%, var(--surface-2));
+  color: var(--red);
+}
+
+.sidebarFooter .recycleFooterButton:hover,
+.sidebarFooter .recycleFooterButton:focus-visible,
+.sidebarFooter .recycleFooterButton.active {
+  border-color: color-mix(in srgb, var(--red) 52%, transparent);
+  background: color-mix(in srgb, var(--red) 18%, var(--surface-2));
+  color: var(--red);
+}
+
+.recycleFooterButton span {
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--red) 13%, transparent);
   font-size: 11px;
   text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .workspace {
@@ -1771,8 +1852,7 @@ textarea {
     height: 36px;
   }
 
-  .brand p,
-  .sidebarFooter p {
+  .brand p {
     display: none;
   }
 
@@ -1782,9 +1862,10 @@ textarea {
     padding-bottom: 7px;
   }
 
-  .allBooks {
-    margin-top: 6px;
-    margin-bottom: 6px;
+  .directoryHeader {
+    min-height: 34px;
+    padding-top: 3px;
+    padding-bottom: 3px;
   }
 
   .sidebarFooter {
