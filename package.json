@@ -1,0 +1,27 @@
+{
+  "name": "book-manager-electron",
+  "version": "1.0.0",
+  "description": "Electron + React + Vite book manager with SQLite persistence.",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/dev.js",
+    "build": "vite build",
+    "start": "electron .",
+    "check": "node --check main.js && node --check preload.js && node --check src/database.js && node --check src/backup.js && node --check src/library-root.js && node --check scripts/dev.js && node --check scripts/smoke.js && node --check scripts/backup-smoke.js && node --check scripts/library-root-smoke.js && node --check scripts/electron-smoke.js && node --check scripts/ui-regression.js && node --check scripts/source-regression.js",
+    "electron:smoke": "node scripts/electron-smoke.js",
+    "ui:regression": "node scripts/ui-regression.js",
+    "smoke": "node scripts/smoke.js && node scripts/backup-smoke.js && node scripts/library-root-smoke.js && node scripts/source-regression.js"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "sql.js": "^1.11.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^33.2.1",
+    "vite": "^6.0.3"
+  }
+}
